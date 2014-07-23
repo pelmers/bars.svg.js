@@ -11,6 +11,7 @@ function BarChart(container, width, height) {
         barOpacity = "1.0",
         title = null,
         fontSize = height/32,
+        animTime = 350, // total time of each animation
         textPadding = 4, // padding between text
         barPadding = 5, // 5pt between bars
         leftPadding = fontSize*2 + textPadding,
@@ -146,6 +147,26 @@ function BarChart(container, width, height) {
         container.appendChild(chart);
     }
 
+    function animateGrowth(bar, targetHeight, totalTime, easing) {
+        var requestId,
+            start = window.performance.now(),
+            oldHeight = ~~bar.getAttributeNS(null, 'height');
+        function anim(t) {
+            if (t >= start + totalTime) {
+                // we're done, push to the end and cancel animation
+                bar.setAttributeNS(null, 'height', targetHeight);
+                bar.setAttributeNS(null, 'y', height - targetHeight - bottomPadding);
+                window.cancelAnimationFrame(requestId);
+            } else {
+                var dH = (targetHeight - oldHeight) * easing(t-start);
+                bar.setAttributeNS(null, 'height', oldHeight + dH);
+                bar.setAttributeNS(null, 'y', height - (oldHeight+dH) - bottomPadding);
+                requestId = window.requestAnimationFrame(anim);
+            }
+        }
+        requestId = window.requestAnimationFrame(anim);
+    }
+
     function update(newData) {
         // Overwrite existing data with that present in newData, expanding the scale if necessary
         setScaleFromData(newData);
@@ -154,11 +175,12 @@ function BarChart(container, width, height) {
         for (var i = 0; i < bars.length; i++) {
             var barHeight = ~~(newData[i] * (height- topPadding - bottomPadding-2) / (maxY - minY))+2;
             bars[i].setAttributeNS(null, 'width', barWidth);
-            bars[i].setAttributeNS(null, 'height', barHeight);
             bars[i].setAttributeNS(null, 'x', offsetX);
-            bars[i].setAttributeNS(null, 'y', height - barHeight - bottomPadding);
             bars[i].setAttributeNS(null, 'fill', barColor);
             bars[i].setAttributeNS(null, 'fill-opacity', barOpacity);
+            animateGrowth(bars[i], barHeight, animTime, function(t) {
+                return t/animTime;
+            });
             offsetX += barWidth + barPadding;
             values[i] = newData[i];
         }
