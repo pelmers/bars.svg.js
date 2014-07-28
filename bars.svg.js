@@ -1,26 +1,59 @@
 function BarChart(container, width, height) {
+    // Create bar charts.
     "use strict";
     var svgNS = "http://www.w3.org/2000/svg",
         chart = document.createElementNS(svgNS, 'svg'),
         minX = 0, maxX = 0, minY = 0, maxY = 0,
         xLabel = null, yLabel = null,
         xScale = null, yScale = null,
-        values = [],
+        curHeights = [],
         bars = [],
         barColor = "red",
         barOpacity = "1.0",
         title = null,
-        fontSize = height/32,
         animTime = 350, // total time of each animation
+        easingFunc = function(t) { return t/getAnimTime(); }, // default to linear easing
+        fontSize, textPadding, barPadding, leftPadding, rightPadding, topPadding, bottomPadding;
+
+    function getChildren(element) {
+        // Polyfill for getting children of SVG element (for Safari and IE)
+        if (element.children)
+            return element.children;
+        var childNodes = element.childNodes,
+            children = [];
+        for (var i = 1; i < childNodes.length; i += 2) {
+            children.push(childNodes[i]);
+        }
+        return children;
+    }
+
+    function calculatePaddings() {
+        fontSize = height/32,
         textPadding = 4, // padding between text
         barPadding = 5, // 5pt between bars
-        leftPadding = fontSize*2 + textPadding,
+        leftPadding = fontSize*2 + textPadding*2,
         rightPadding = textPadding,
         topPadding = (fontSize+2) + textPadding,
         bottomPadding = fontSize*2 + textPadding;
+    }
+
+    function setAnimTime(time) {
+        // Set bar animation duration (in ms).
+        animTime = time;
+    }
+
+    function setEasingFunc(easer) {
+        // Set the easing function used to animate bar updates.
+        easingFunc = easer;
+    }
+
+    function getAnimTime() {
+        // Return current animation duration.
+        return animTime;
+    }
 
     function setLabels(x_label, y_label) {
-        // Set x and y labels, use before load()
+        // Set x and y labels
         if (!xLabel) {
             xLabel = document.createElementNS(svgNS, 'text');
             chart.appendChild(xLabel);
@@ -58,6 +91,7 @@ function BarChart(container, width, height) {
     }
 
     function setBarColor(color, opacity) {
+        // Set color and opacity of bars
         barColor = color;
         barOpacity = (opacity)?opacity:barOpacity;
     }
@@ -88,31 +122,37 @@ function BarChart(container, width, height) {
             chart.appendChild(yScale);
         }
         var xInterval = Math.ceil(((maxX - minX) / Math.min(maxX - minX, 9))),
-            barWidth = ~~((width - (leftPadding + rightPadding)) / (maxX - minX) - barPadding);
-        while (xScale.children.length < 1+((maxX - minX) / xInterval)|0)
+            barWidth = ~~((width - (leftPadding + rightPadding)) / (maxX - minX) - barPadding),
+            children = getChildren(xScale);
+        for (var i = children.length; i < 1+((maxX - minX) / xInterval)|0; i++)
             xScale.appendChild(document.createElementNS(svgNS, 'text'));
-        for (var i = xScale.children.length - 1; i >= 1+((maxX-minX) / xInterval)|0; i--)
-            xScale.removeChild(xScale.children[i]);
-        for (var i = 0; i < xScale.children.length; i++) {
-            xScale.children[i].textContent = xInterval*i;
-            xScale.children[i].setAttributeNS(null, 'x', i*xInterval*(barWidth + barPadding) + fontSize + textPadding*2);
-            xScale.children[i].setAttributeNS(null, 'y', height - bottomPadding + fontSize);
-            xScale.children[i].setAttributeNS(null, 'font-size', fontSize+'px');
-            xScale.children[i].setAttributeNS(null, 'text-anchor', 'start');
+        var children = getChildren(xScale);
+        for (var i = children.length - 1; i >= 1+((maxX-minX) / xInterval)|0; i--)
+            xScale.removeChild(children[i]);
+        var children = getChildren(xScale);
+        for (var i = 0; i < children.length; i++) {
+            children[i].textContent = xInterval*i;
+            children[i].setAttributeNS(null, 'x', i*xInterval*(barWidth + barPadding) + fontSize + textPadding*2);
+            children[i].setAttributeNS(null, 'y', height - bottomPadding + fontSize);
+            children[i].setAttributeNS(null, 'font-size', fontSize+'px');
+            children[i].setAttributeNS(null, 'text-anchor', 'start');
         }
 
-        var yInterval = Math.ceil(((maxY - minY) / Math.min(maxY - minY, 9)));
-        while (yScale.children.length < 1+((maxY - minY) / yInterval)|0)
+        var yInterval = Math.ceil(((maxY - minY) / Math.min(maxY - minY, 9))),
+            children = getChildren(yScale);
+        for (var i = children.length; i < 1+((maxY - minY) / yInterval)|0; i++)
             yScale.appendChild(document.createElementNS(svgNS, 'text'));
-        for (var i = yScale.children.length - 1; i >= 1+((maxY-minY) / yInterval)|0; i--)
-            yScale.removeChild(yScale.children[i]);
-        for (var i = 0; i < yScale.children.length; i++) {
-            var labelHeight = ~~((i+1) * (height - topPadding - bottomPadding + fontSize) / (maxY - minY))+fontSize/2;
-            yScale.children[i].textContent = yInterval*(i+1);
-            yScale.children[i].setAttributeNS(null, 'x', fontSize + barPadding);
-            yScale.children[i].setAttributeNS(null, 'y', height - labelHeight);
-            yScale.children[i].setAttributeNS(null, 'font-size', fontSize+'px');
-            yScale.children[i].setAttributeNS(null, 'text-anchor', 'start');
+        var children = getChildren(yScale);
+        for (var i = children.length - 1; i >= 1+((maxY-minY) / yInterval)|0; i--)
+            yScale.removeChild(children[i]);
+        var children = getChildren(yScale);
+        for (var i = 0; i < children.length; i++) {
+            var labelHeight = ~~((i+1) * yInterval * (height - topPadding - bottomPadding + fontSize) / (maxY - minY))+fontSize/2;
+            children[i].textContent = yInterval*(i+1);
+            children[i].setAttributeNS(null, 'x', fontSize + barPadding);
+            children[i].setAttributeNS(null, 'y', height - labelHeight);
+            children[i].setAttributeNS(null, 'font-size', fontSize+'px');
+            children[i].setAttributeNS(null, 'text-anchor', 'start');
         }
     }
 
@@ -122,7 +162,7 @@ function BarChart(container, width, height) {
             range = [0,0];
         for (var k in data) {
             if (!data.hasOwnProperty(k)) continue;
-            domain = [Math.min(~~k, domain[0]), Math.max(~~k, domain[1])];
+            domain = [Math.min(~~k, domain[0]), Math.max(~~k+1, domain[1])];
             range = [Math.min(data[k], range[0]), Math.max(data[k], range[1])];
         }
         setScale(domain[0], domain[1], range[0], range[1]);
@@ -134,7 +174,7 @@ function BarChart(container, width, height) {
             range = [minY,maxY];
         for (var k in data) {
             if (!data.hasOwnProperty(k)) continue;
-            domain = [Math.min(~~k, domain[0]), Math.max(~~k, domain[1])];
+            domain = [Math.min(~~k, domain[0]), Math.max(~~k+1, domain[1])];
             range = [Math.min(data[k], range[0]), Math.max(data[k], range[1])];
         }
         setScale(domain[0], domain[1], range[0], range[1]);
@@ -144,27 +184,31 @@ function BarChart(container, width, height) {
         // Append the chart element to the container
         chart.setAttributeNS(null, 'width', width + 'px');
         chart.setAttributeNS(null, 'height', height + 'px');
+        chart.setAttributeNS(null, 'viewBox', "0 0 " + width + " " + height);
+        calculatePaddings();
         container.appendChild(chart);
     }
 
     function animateGrowth(bar, targetHeight, totalTime, easing) {
-        var requestId,
-            start = window.performance.now(),
+        var start,
             oldHeight = ~~bar.getAttributeNS(null, 'height');
         function anim(t) {
+            // Store the time of the first frame of animation as the start time.
+            if (!start)
+                start = t;
             if (t >= start + totalTime) {
-                // we're done, push to the end and cancel animation
+                // we're done, just push the bar to the end
                 bar.setAttributeNS(null, 'height', targetHeight);
                 bar.setAttributeNS(null, 'y', height - targetHeight - bottomPadding);
-                window.cancelAnimationFrame(requestId);
             } else {
+                // get change in height from easing function
                 var dH = (targetHeight - oldHeight) * easing(t-start);
                 bar.setAttributeNS(null, 'height', oldHeight + dH);
                 bar.setAttributeNS(null, 'y', height - (oldHeight+dH) - bottomPadding);
-                requestId = window.requestAnimationFrame(anim);
+                window.requestAnimationFrame(anim);
             }
         }
-        requestId = window.requestAnimationFrame(anim);
+        window.requestAnimationFrame(anim);
     }
 
     function update(newData) {
@@ -173,17 +217,21 @@ function BarChart(container, width, height) {
         var offsetX = leftPadding,
             barWidth = ~~((width - (leftPadding + rightPadding)) / (maxX - minX) - barPadding);
         for (var i = 0; i < bars.length; i++) {
+            // +2 here means that the bar is 2 at minimum 2 pixels high
             var barHeight = ~~(newData[i] * (height- topPadding - bottomPadding-2) / (maxY - minY))+2;
             bars[i].setAttributeNS(null, 'width', barWidth);
             bars[i].setAttributeNS(null, 'x', offsetX);
             bars[i].setAttributeNS(null, 'fill', barColor);
             bars[i].setAttributeNS(null, 'fill-opacity', barOpacity);
-            animateGrowth(bars[i], barHeight, animTime, function(t) {
-                return t/animTime;
-            });
             offsetX += barWidth + barPadding;
-            values[i] = newData[i];
+            if (curHeights[i] !== barHeight)
+                // only re-run the animation if the height has not changed
+                animateGrowth(bars[i], barHeight, animTime, easingFunc);
+            curHeights[i] = barHeight;
         }
+        // set height of hidden bars back to 0
+        for (var i = bars.length; i < curHeights.length; i++)
+            curHeights[i] = 0;
     }
 
     load();
@@ -192,8 +240,15 @@ function BarChart(container, width, height) {
         setScale: setScale,
         setScaleFromData: setScaleFromData,
         trimScaleFromData: trimScaleFromData,
+
+        // getters
+        getAnimTime: getAnimTime,
+
+        // setters
+        setAnimTime: setAnimTime,
         setLabels: setLabels,
         setTitle: setTitle,
         setBarColor: setBarColor,
+        setEasingFunc: setEasingFunc,
     };
 }
