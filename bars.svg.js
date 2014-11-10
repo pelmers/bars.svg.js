@@ -11,6 +11,7 @@ function BarChart(container, width, height) {
         bars = [],
         barColor = "red",
         barOpacity = "1.0",
+        barColors = {},
         title = null,
         animTime = 350, // total time of each animation
         easingFunc = function(t) { return Math.pow(t/getAnimTime(), 2); }, // default to quadratic ease in
@@ -114,10 +115,18 @@ function BarChart(container, width, height) {
         title.textContent = text;
     }
 
-    function setBarColor(color, opacity) {
-        // Set color and opacity of bars
-        barColor = color;
-        barOpacity = (opacity)?opacity:barOpacity;
+    function setBarColor(color, opacity, barNumber) {
+        // Set color and opacity of all bars or a specific bar
+        if (barNumber !== undefined) {
+            barColors[barNumber] = {
+                color: color,
+                opacity: opacity
+            };
+        }
+        else {
+            barColor = color;
+            barOpacity = (opacity)?opacity:barOpacity;
+        }
     }
 
     function setScale(min_x, max_x, min_y, max_y) {
@@ -260,8 +269,14 @@ function BarChart(container, width, height) {
             var barHeight = ~~(dataArr[i] * (height- topPadding - bottomPadding-2) / (maxY - minY))+2;
             bars[i].setAttributeNS(null, 'width', barWidth);
             bars[i].setAttributeNS(null, 'x', offsetX);
-            bars[i].setAttributeNS(null, 'fill', barColor);
-            bars[i].setAttributeNS(null, 'fill-opacity', barOpacity);
+            if (barColors[i] === undefined) {
+                // use default color
+                bars[i].setAttributeNS(null, 'fill', barColor);
+                bars[i].setAttributeNS(null, 'fill-opacity', barOpacity);
+            } else {
+                bars[i].setAttributeNS(null, 'fill', barColors[i].color);
+                bars[i].setAttributeNS(null, 'fill-opacity', barColors[i].opacity);
+            }
             offsetX += barWidth + barPadding;
             if (curHeights[i] !== barHeight)
                 // only re-run the animation if the height has not changed
