@@ -3,7 +3,7 @@ function BarChart(container, width, height) {
     "use strict";
     var svgNS = "http://www.w3.org/2000/svg",
         chart = document.createElementNS(svgNS, 'svg'),
-        minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity,
+        minX = 0, maxX = -Infinity, minY = 0, maxY = -Infinity,
         xLabel = null, yLabel = null,
         xScale = null, yScale = null,
         xMult = 1, yMult = 1,
@@ -288,6 +288,11 @@ function BarChart(container, width, height) {
             curHeights[i] = undefined;
     }
 
+    function removeChart() {
+        // Remove the chart SVG element from the DOM
+        chart.parentElement.removeChild(chart);
+    }
+
     load();
     return {
         update: update,
@@ -306,5 +311,8 @@ function BarChart(container, width, height) {
         setScale: setScale,
         setScaleFromData: setScaleFromData,
         trimScaleFromData: trimScaleFromData,
+
+        // deleter
+        removeChart: removeChart,
     };
 }
